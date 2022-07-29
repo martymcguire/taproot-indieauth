@@ -378,6 +378,7 @@ class Server {
 					}
 
 					// Verify that it was issued for the same client_id and redirect_uri
+					$bodyParams['client_id'] = IndieAuthClient::normalizeMeUrl($bodyParams['client_id']);
 					if ($authCode['client_id'] !== $bodyParams['client_id']
 						|| $authCode['redirect_uri'] !== $bodyParams['redirect_uri']) {
 						$this->logger->error("The provided client_id and/or redirect_uri did not match those stored in the token.");
@@ -456,14 +457,19 @@ class Server {
 					$this->logger->info('Handling an authorization request', ['method' => $request->getMethod()]);
 
 					// Validate the Client ID.
-					if (!isset($queryParams['client_id']) || false === filter_var($queryParams['client_id'], FILTER_VALIDATE_URL) || !isClientIdentifier($queryParams['client_id'])) {
+					if (!isset($queryParams['client_id'])) {
+						$this->logger->warning("client_id not provided in an authorization request.", $queryParams);
+						throw IndieAuthException::create(IndieAuthException::INVALID_CLIENT_ID, $request);
+					}
+					$queryParams['client_id'] = IndieAuthClient::normalizeMeUrl($queryParams['client_id']);
+					if (false === filter_var($queryParams['client_id'], FILTER_VALIDATE_URL) || !isClientIdentifier($queryParams['client_id'])) {
 						$this->logger->warning("The client_id provided in an authorization request was not valid.", $queryParams);
 						throw IndieAuthException::create(IndieAuthException::INVALID_CLIENT_ID, $request);
 					}
 
 					// Validate the redirect URI.
 					if (!isset($queryParams['redirect_uri']) || false === filter_var($queryParams['redirect_uri'], FILTER_VALIDATE_URL)) {
-						$this->logger->warning("The request_uri provided in an authorization request was not valid.", $queryParams);
+						$this->logger->warning("The client_id provided in an authorization request was not valid.", $queryParams);
 						throw IndieAuthException::create(IndieAuthException::INVALID_REDIRECT_URI, $request);
 					}
 
@@ -758,9 +764,11 @@ class Server {
 					}
 
 					// Verify that it was issued for the same client_id and redirect_uri
+					// normalize client_id for consistency
+					$bodyParams['client_id'] = IndieAuthClient::normalizeMeUrl($bodyParams['client_id']);
 					if ($authCode['client_id'] !== $bodyParams['client_id']
 						|| $authCode['redirect_uri'] !== $bodyParams['redirect_uri']) {
-						$this->logger->error("The provided client_id and/or redirect_uri did not match those stored in the token.");
+						$this->logger->error("The provided client_id and/or redirect_uri did not match those stored in the token." . $bodyParams);
 						throw IndieAuthException::create(IndieAuthException::INVALID_GRANT, $request);
 					}
 

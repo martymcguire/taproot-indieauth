@@ -6,6 +6,7 @@ use Exception;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerInterface;
+use IndieAuth\Client as IndieAuthClient;
 
 // From https://github.com/indieweb/indieauth-client-php/blob/main/src/IndieAuth/Client.php, thanks aaronpk.
 function generateRandomString(int $numBytes): string {
@@ -57,6 +58,9 @@ function hashAuthorizationRequestParameters(ServerRequestInterface $request, str
 			return null;
 		}
 		$data .= $queryParams[$key];
+		if ($key == 'client_id') {
+			$data = IndieAuthClient::normalizeMeUrl($data);
+		}
 	}
 	return hash_hmac($algo, $data, $secret);
 }
